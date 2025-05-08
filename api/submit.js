@@ -56,7 +56,8 @@ Item: ${stockItem}
 Description: ${description}
             `,
         });
-
+console.log('Incoming body:', req.body);
+console.log('Environment variables:', process.env);
         console.log(`Form details sent to admin: ${process.env.ADMIN_EMAIL}`);
 
         return res.status(200).json({ success: true, message: 'Request submitted successfully' });
