@@ -1,0 +1,11 @@
+# Ignore backend secrets + node_modules
+/backend/.env
+/backend/node_modules/
+
+# Ignore frontend node_modules if applicable
+/frontend/node_modules/
+
+# Ignore editor + system junk
+.vscode/
+.DS_Store
+Thumbs.db
