@@ -2,10 +2,21 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 const cors = require('cors');
 
+// Create a transporter to send emails
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+});
+
+// This function is used to handle the request and response
 module.exports = async (req, res) => {
-    // Enable CORS
+    // Handle CORS for your frontend domain
     cors({
-        origin: 'https://stock-request-form.vercel.app', // Replace with the actual frontend URL
+        origin: 'https://stock-request-form.vercel.app', // Your frontend domain
         methods: ['POST'],
         allowedHeaders: ['Content-Type'],
     })(req, res, () => {});
@@ -13,20 +24,10 @@ module.exports = async (req, res) => {
     if (req.method === 'POST') {
         const { name, email, category, stockItem, description } = req.body;
 
-        // Setup transporter
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
-
         try {
-            // 1️⃣ Send confirmation email to the user
+            // Send confirmation email to the user
             await transporter.sendMail({
-                from: process.env.ADMIN_EMAIL,  // must be verified sender
+                from: process.env.ADMIN_EMAIL,  // Verified sender email
                 to: email,
                 subject: 'Thank you for your enquiry!',
                 text: `Hi ${name},\n\nThank you for your enquiry about ${stockItem} (${category}). We’ve received your request and will get back to you shortly.\n\nBest,\nYour Team`,
@@ -34,13 +35,14 @@ module.exports = async (req, res) => {
 
             console.log(`Confirmation email sent to ${email}`);
 
-            // 2️⃣ Send full form details to the admin
+            // Send full form details to the admin
             await transporter.sendMail({
                 from: process.env.ADMIN_EMAIL,
                 to: process.env.ADMIN_EMAIL,
                 subject: `New Stock Request from ${name}`,
                 text: `
 You received a new stock request:
+
 Name: ${name}
 Email: ${email}
 Category: ${category}
