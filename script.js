@@ -35,25 +35,6 @@ function hashString(str) {
 }
 
 
-function generateCaptcha() {
-    const num1 = Math.floor(Math.random() * 10) + 1;
-    const num2 = Math.floor(Math.random() * 10) + 1;
-    const operations = ['+', '-', '*'];
-    const op = operations[Math.floor(Math.random() * operations.length)];
-    let answer;
-    let question;
-
-    switch(op) {
-        case '+': answer = num1 + num2; question = `What is ${num1} + ${num2}?`; break;
-        case '-': answer = num1 - num2; question = `What is ${num1} - ${num2}?`; break;
-        case '*': answer = num1 * num2; question = `What is ${num1} × ${num2}?`; break;
-    }
-    document.getElementById('captchaQuestion').textContent = question;
-    return hashString(answer.toString());
-}
-
-let correctCaptchaHash = generateCaptcha();
-let lastSubmitTime = 0;
 
 const form = document.getElementById('stockRequestForm');
 const categorySelect = document.getElementById('category');
