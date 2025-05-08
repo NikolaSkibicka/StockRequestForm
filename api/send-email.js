@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
 module.exports = async (req, res) => {
     // Handle CORS for your frontend domain
     cors({
-        origin: 'https://stock-request-form.vercel.app', // Your frontend domain
+        origin: 'https://stock-request-form.vercel.app/', // Your frontend domain
         methods: ['POST'],
         allowedHeaders: ['Content-Type'],
     })(req, res, () => {});
