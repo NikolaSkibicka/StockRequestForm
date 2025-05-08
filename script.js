@@ -105,7 +105,7 @@ form.addEventListener('submit', function(e) {
     console.log('Stock request submitted:', data);
 
     // Send form data to backend API
-    fetch('http://localhost:3000/submit', { // Replace with your backend URL
+    fetch('https://your-vercel-app-name.vercel.app/api/submit', { // Replace with your backend URL
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
