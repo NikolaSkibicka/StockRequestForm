@@ -1,37 +1,53 @@
+const nodemailer = require('nodemailer');
+const axios = require('axios');
+require('dotenv').config();
+
+// Create transporter
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+});
+
 module.exports = async (req, res) => {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ success: false, message: 'Method Not Allowed' });
+    }
+
+    const { name, email, category, stockItem, description, captchaResponse } = req.body;
+
+    console.log('Incoming body:', req.body);
+
+    if (!captchaResponse) {
+        console.error('No captcha response provided.');
+        return res.status(400).json({ success: false, message: 'Captcha missing.' });
+    }
+
+    const captchaSecret = process.env.RECAPTCHA_SECRET_KEY;
+    const captchaVerificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${captchaSecret}&response=${captchaResponse}`;
+
     try {
-        // Handle CORS
-        cors({
-            origin: 'https://stock-request-form.vercel.app/', // frontend domain
-            methods: ['POST'],
-            allowedHeaders: ['Content-Type'],
-        })(req, res, () => {});
-
-        if (req.method !== 'POST') {
-            return res.status(405).json({ success: false, message: 'Method Not Allowed' });
-        }
-
-        const { name, email, category, stockItem, description, captchaResponse } = req.body;
-
-        if (!captchaResponse) {
-            return res.status(400).json({ success: false, message: 'Missing CAPTCHA response' });
-        }
-
-        // Step 1: Verify the reCAPTCHA response with Google
-        const captchaSecret = process.env.RECAPTCHA_SECRET_KEY;
-        const captchaVerificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${captchaSecret}&response=${captchaResponse}`;
-
         const captchaVerificationResponse = await axios.post(captchaVerificationUrl);
         const captchaData = captchaVerificationResponse.data;
 
+        console.log('Captcha verification response:', captchaData);
+
         if (!captchaData.success) {
+            console.error('Captcha failed:', captchaData);
             return res.status(400).json({
                 success: false,
-                message: 'reCAPTCHA verification failed. Please try again.',
+                message: 'Captcha verification failed. Please try again.',
             });
         }
+    } catch (captchaError) {
+        console.error('Error verifying captcha:', captchaError.response?.data || captchaError.message);
+        return res.status(500).json({ success: false, message: 'Captcha verification error.' });
+    }
 
-        // Step 2: Send confirmation email to the user
+    try {
         await transporter.sendMail({
             from: process.env.ADMIN_EMAIL,
             to: email,
@@ -41,13 +57,12 @@ module.exports = async (req, res) => {
 
         console.log(`Confirmation email sent to ${email}`);
 
-        // Step 3: Send full form details to the admin
         await transporter.sendMail({
             from: process.env.ADMIN_EMAIL,
             to: process.env.ADMIN_EMAIL,
             subject: `New Stock Request from ${name}`,
             text: `
-You received a new stock request:
+New stock request:
 
 Name: ${name}
 Email: ${email}
@@ -57,12 +72,11 @@ Description: ${description}
             `,
         });
 
-        console.log(`Form details sent to admin: ${process.env.ADMIN_EMAIL}`);
+        console.log(`Admin notified at ${process.env.ADMIN_EMAIL}`);
 
         return res.status(200).json({ success: true, message: 'Request submitted successfully' });
-
-    } catch (error) {
-        console.error('Server error:', error);
-        return res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
+    } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        return res.status(500).json({ success: false, message: 'Email sending failed.' });
     }
 };
