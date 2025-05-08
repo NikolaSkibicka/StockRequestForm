@@ -34,7 +34,7 @@ function hashString(str) {
     return hash;
 }
 
-
+let lastSubmitTime = 0;
 
 const form = document.getElementById('stockRequestForm');
 const categorySelect = document.getElementById('category');
