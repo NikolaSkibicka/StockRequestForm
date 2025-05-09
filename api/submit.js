@@ -1,8 +1,10 @@
 const nodemailer = require('nodemailer');
 const axios = require('axios');
-const rateLimitMap = new Map(); // In-memory rate limiter
-
 require('dotenv').config();
+
+// In-memory rate limiter and IP banlist (for simplicity, you can use a database for persistence)
+const rateLimitMap = new Map();  // {ip: [timestamps]}
+const banlist = new Set();  // Set of banned IPs
 
 // Email transporter setup
 const transporter = nodemailer.createTransport({
@@ -14,11 +16,11 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// Utility: Simple in-memory rate limiter (per IP)
+// Utility: Check if the IP is rate-limited
 function isRateLimited(ip) {
     const now = Date.now();
-    const windowMs = 60 * 1000; // 1 minute
-    const maxRequests = 5; // max 5 requests per minute
+    const windowMs = 60 * 1000;  // 1 minute
+    const maxRequests = 5;  // Max 5 requests per minute
 
     if (!rateLimitMap.has(ip)) {
         rateLimitMap.set(ip, []);
@@ -29,6 +31,11 @@ function isRateLimited(ip) {
     rateLimitMap.set(ip, timestamps);
 
     return timestamps.length > maxRequests;
+}
+
+// Utility: Check if the IP is banned
+function isBanned(ip) {
+    return banlist.has(ip);
 }
 
 module.exports = async (req, res) => {
@@ -45,9 +52,16 @@ module.exports = async (req, res) => {
         if (req.method !== 'POST') {
             return res.status(405).json({ success: false, message: 'Method Not Allowed' });
         }
-const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '')
-    .split(',')[0]
-    .trim();
+
+        const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
+
+        // Check if the IP is banned
+        if (isBanned(ip)) {
+            console.warn(`Blocked IP (banned): ${ip}`);
+            return res.status(403).json({ success: false, message: 'Your IP is banned.' });
+        }
+
+        // Rate limit check
         if (isRateLimited(ip)) {
             console.warn(`Rate limit exceeded for IP: ${ip}`);
             return res.status(429).json({ success: false, message: 'Too many requests, please slow down.' });
@@ -68,7 +82,7 @@ const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || ''
             new URLSearchParams({
                 secret: captchaSecret,
                 response: captchaResponse,
-                remoteip: ip,
+                remoteip: ip,  // Pass the IP for CAPTCHA verification
             }),
             { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
         );
@@ -78,12 +92,12 @@ const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || ''
             return res.status(400).json({ success: false, message: 'reCAPTCHA verification failed' });
         }
 
-        // Send confirmation email
+        // Send confirmation email to the user
         await transporter.sendMail({
             from: process.env.ADMIN_EMAIL,
             to: email,
             subject: 'Thank you for your enquiry!',
-            text: `Hi ${name},\n\nThank you for your enquiry about ${stockItem} (${category}). We’ve received your request and will get back to you shortly.\n\nBest,\nDrew`,
+            text: `Hi ${name},\n\nThank you for your enquiry about ${stockItem} (${category}). We’ve received your request and will get back to you shortly.\n\nBest,\nYour Team`,
         });
 
         // Send admin notification
