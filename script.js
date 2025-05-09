@@ -65,7 +65,8 @@ function updateSubcategory() {
 categorySelect.addEventListener('change', updateSubcategory);
 window.addEventListener('load', updateSubcategory);
 
-form.addEventListener('submit', function(e) {
+// Mark the submit handler as async
+form.addEventListener('submit', async function(e) {
     e.preventDefault();
     const now = Date.now();
     if (now - lastSubmitTime < 3000) {
@@ -76,6 +77,7 @@ form.addEventListener('submit', function(e) {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData);
 
+    // Assuming you have a captcha validation here
     if (hashString(data.captchaAnswer.trim()) !== correctCaptchaHash) {
         alert('CAPTCHA answer is incorrect. Please try again.');
         correctCaptchaHash = generateCaptcha();
@@ -85,23 +87,27 @@ form.addEventListener('submit', function(e) {
     lastSubmitTime = now;
     console.log('Stock request submitted:', data);
 
-   try {
-    const response = await fetch('https://stock-request-form.vercel.app/api/submit', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-    });
-     const data = await response.json();  // this will fail if the response isn't valid JSON
-    if (data.success) {
-        // Handle success
-    } else {
-        console.error(data.message);  // Error message from backend
+    try {
+        const response = await fetch('https://stock-request-form.vercel.app/api/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),  // Make sure you're passing the correct data object
+        });
+
+        const responseData = await response.json();  // This will fail if the response isn't valid JSON
+
+        if (responseData.success) {
+            // Handle success
+            console.log('Submission successful:', responseData.message);
+        } else {
+            console.error('Error from server:', responseData.message);
+        }
+    } catch (error) {
+        console.error('Failed to submit form:', error);
     }
-} catch (error) {
-    console.error('Failed to submit form:', error);
-}
+
     form.reset();
     correctCaptchaHash = generateCaptcha();
     updateSubcategory();
