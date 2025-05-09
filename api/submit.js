@@ -45,8 +45,9 @@ module.exports = async (req, res) => {
         if (req.method !== 'POST') {
             return res.status(405).json({ success: false, message: 'Method Not Allowed' });
         }
-
-        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '')
+    .split(',')[0]
+    .trim();
         if (isRateLimited(ip)) {
             console.warn(`Rate limit exceeded for IP: ${ip}`);
             return res.status(429).json({ success: false, message: 'Too many requests, please slow down.' });
