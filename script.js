@@ -85,27 +85,23 @@ form.addEventListener('submit', function(e) {
     lastSubmitTime = now;
     console.log('Stock request submitted:', data);
 
-    // Send form data to backend API
-    fetch('https://stock-request-form.vercel.app/api/submit', { // Replace with your backend URL
+   try {
+    const response = await fetch('https://stock-request-form.vercel.app/api/submit', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            alert('Thank you for your request!');
-        } else {
-            alert('Error sending request. Please try again.');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('There was an issue submitting the form. Please try again later.');
+        body: JSON.stringify(formData),
     });
-
+     const data = await response.json();  // this will fail if the response isn't valid JSON
+    if (data.success) {
+        // Handle success
+    } else {
+        console.error(data.message);  // Error message from backend
+    }
+} catch (error) {
+    console.error('Failed to submit form:', error);
+}
     form.reset();
     correctCaptchaHash = generateCaptcha();
     updateSubcategory();
