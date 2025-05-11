@@ -1,3 +1,9 @@
+export const config = {
+  api: {
+    bodyParser: true,
+  },
+};
+
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 require('dotenv').config();
@@ -54,19 +60,7 @@ module.exports = async (req, res) => {
         }
 
         // ✅ Parse body
-        let body = '';
-        for await (const chunk of req) {
-            body += chunk;
-        }
-
-        let parsedBody;
-        try {
-            parsedBody = JSON.parse(body);
-        } catch (err) {
-            res.status(400).json({ success: false, message: 'Invalid JSON format' });
-        }
-
-        const { name, email, category, stockItem, description, captchaResponse } = parsedBody;
+        const { name, email, category, stockItem, description, captchaResponse } = req.body;
 
 
         const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
