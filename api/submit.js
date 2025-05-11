@@ -69,7 +69,8 @@ module.exports = async (req, res) => {
         const { name, email, category, stockItem, description, captchaResponse } = parsedBody;
 
 
-        const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
+        const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+
 
         // Check if the IP is banned
         if (isBanned(ip)) {
