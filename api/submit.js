@@ -46,11 +46,11 @@ module.exports = async (req, res) => {
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
         if (req.method === 'OPTIONS') {
-            return res.status(200).end();
+            res.status(200).end();
         }
 
         if (req.method !== 'POST') {
-            return res.status(405).json({ success: false, message: 'Method Not Allowed' });
+            res.status(405).json({ success: false, message: 'Method Not Allowed' });
         }
 
         // ✅ Parse body
@@ -63,7 +63,7 @@ module.exports = async (req, res) => {
         try {
             parsedBody = JSON.parse(body);
         } catch (err) {
-            return res.status(400).json({ success: false, message: 'Invalid JSON format' });
+            res.status(400).json({ success: false, message: 'Invalid JSON format' });
         }
 
         const { name, email, category, stockItem, description, captchaResponse } = parsedBody;
@@ -75,19 +75,17 @@ module.exports = async (req, res) => {
         // Check if the IP is banned
         if (isBanned(ip)) {
             console.warn(`Blocked IP (banned): ${ip}`);
-            return res.status(403).json({ success: false, message: 'Your IP is banned.' });
+            res.status(403).json({ success: false, message: 'Your IP is banned.' });
         }
 
         // Rate limit check
         if (isRateLimited(ip)) {
             console.warn(`Rate limit exceeded for IP: ${ip}`);
-            return res.status(429).json({ success: false, message: 'Too many requests, please slow down.' });
+             res.status(429).json({ success: false, message: 'Too many requests, please slow down.' });
         }
 
-        const { name, email, category, stockItem, description, captchaResponse } = req.body;
-
         if (!captchaResponse) {
-            return res.status(400).json({ success: false, message: 'Missing CAPTCHA response' });
+            res.status(400).json({ success: false, message: 'Missing CAPTCHA response' });
         }
 
         // Verify CAPTCHA with Google
@@ -106,7 +104,7 @@ module.exports = async (req, res) => {
 
         if (!captchaRes.data.success) {
             console.warn(`CAPTCHA failed for IP: ${ip}`);
-            return res.status(400).json({ success: false, message: 'reCAPTCHA verification failed' });
+            res.status(400).json({ success: false, message: 'reCAPTCHA verification failed' });
         }
 
         // Send confirmation email to the user
@@ -127,11 +125,11 @@ module.exports = async (req, res) => {
 
         console.log(`Request processed successfully for IP: ${ip}`);
 
-        return res.status(200).json({ success: true, message: 'Request submitted successfully' });
+        res.status(200).json({ success: true, message: 'Request submitted successfully' });
 
     } catch (error) {
         console.error('Server error:', error);
         // Ensure error messages are properly sent back as JSON
-        return res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
+        res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
     }
 };
