@@ -53,6 +53,22 @@ module.exports = async (req, res) => {
             return res.status(405).json({ success: false, message: 'Method Not Allowed' });
         }
 
+        // ✅ Parse body
+        let body = '';
+        for await (const chunk of req) {
+            body += chunk;
+        }
+
+        let parsedBody;
+        try {
+            parsedBody = JSON.parse(body);
+        } catch (err) {
+            return res.status(400).json({ success: false, message: 'Invalid JSON format' });
+        }
+
+        const { name, email, category, stockItem, description, captchaResponse } = parsedBody;
+
+
         const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
 
         // Check if the IP is banned
