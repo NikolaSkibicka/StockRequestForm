@@ -132,8 +132,5 @@ module.exports = async (req, res) => {
           error: error.message, // helpful
           stack: error.stack,   // even more helpful
       });
-
-        // Ensure error messages are properly sent back as JSON
-        return res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
     }
 };
