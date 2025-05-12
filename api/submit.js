@@ -13,6 +13,9 @@ require('dotenv').config();
 // In-memory rate limiter and IP banlist (for simplicity, you can use a database for persistence)
 const rateLimitMap = new Map();  // {ip: [timestamps]}
 const banlist = new Set();  // Set of banned IPs
+if (!process.env.ADMIN_EMAIL || !process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    throw new Error('Missing required environment variables');
+}
 
 // Email transporter setup
 const transporter = nodemailer.createTransport({
