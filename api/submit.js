@@ -133,4 +133,3 @@ module.exports = async (req, res) => {
           stack: error.stack,   // even more helpful
       });
     }
-};
