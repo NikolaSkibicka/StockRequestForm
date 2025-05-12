@@ -53,10 +53,11 @@ module.exports = async (req, res) => {
 
         if (req.method === 'OPTIONS') {
             res.status(200).end();
+           return;
         }
 
         if (req.method !== 'POST') {
-            res.status(405).json({ success: false, message: 'Method Not Allowed' });
+            return res.status(405).json({ success: false, message: 'Method Not Allowed' });
         }
 
         // ✅ Parse body
@@ -69,17 +70,17 @@ module.exports = async (req, res) => {
         // Check if the IP is banned
         if (isBanned(ip)) {
             console.warn(`Blocked IP (banned): ${ip}`);
-            res.status(403).json({ success: false, message: 'Your IP is banned.' });
+            return res.status(403).json({ success: false, message: 'Your IP is banned.' });
         }
 
         // Rate limit check
         if (isRateLimited(ip)) {
             console.warn(`Rate limit exceeded for IP: ${ip}`);
-             res.status(429).json({ success: false, message: 'Too many requests, please slow down.' });
+            return res.status(429).json({ success: false, message: 'Too many requests, please slow down.' });
         }
 
         if (!captchaResponse) {
-            res.status(400).json({ success: false, message: 'Missing CAPTCHA response' });
+           return res.status(400).json({ success: false, message: 'Missing CAPTCHA response' });
         }
 
         // Verify CAPTCHA with Google
@@ -98,7 +99,7 @@ module.exports = async (req, res) => {
 
         if (!captchaRes.data.success) {
             console.warn(`CAPTCHA failed for IP: ${ip}`);
-            res.status(400).json({ success: false, message: 'reCAPTCHA verification failed' });
+            return res.status(400).json({ success: false, message: 'reCAPTCHA verification failed' });
         }
 
         // Send confirmation email to the user
@@ -119,11 +120,11 @@ module.exports = async (req, res) => {
 
         console.log(`Request processed successfully for IP: ${ip}`);
 
-        res.status(200).json({ success: true, message: 'Request submitted successfully' });
+        return res.status(200).json({ success: true, message: 'Request submitted successfully' });
 
     } catch (error) {
         console.error('Server error:', error);
         // Ensure error messages are properly sent back as JSON
-        res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
+        return res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
     }
 };
