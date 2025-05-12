@@ -124,6 +124,16 @@ module.exports = async (req, res) => {
 
     } catch (error) {
         console.error('Server error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Internal Server Error',
+          error: error.message, // helpful
+          stack: error.stack,   // even more helpful
+      });
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection:', reason);
+});
+
         // Ensure error messages are properly sent back as JSON
         return res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
     }
