@@ -96,7 +96,18 @@ form.addEventListener('submit', async function(e) {
             body: JSON.stringify(data),  // Make sure you're passing the correct data object
         });
 
-        const responseData = await response.json();  // This will fail if the response isn't valid JSON
+        let responseData;
+const contentType = response.headers.get('content-type');
+
+if (contentType && contentType.includes('application/json')) {
+    responseData = await response.json();
+} else {
+    const text = await response.text();  // fallback for text/html error pages
+    console.error('Non-JSON response:', text);
+    alert('An error occurred. Please try again later.');
+    return;
+}
+
 
         if (responseData.success) {
             // Handle success
