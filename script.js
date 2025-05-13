@@ -56,24 +56,24 @@ function updateSubcategory() {
 categorySelect.addEventListener('change', updateSubcategory);
 window.addEventListener('load', updateSubcategory);
 
-form.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    // Check if the user submitted recently
-    const now = Date.now();
-    if (now - lastSubmitTime < 3000) {
-        alert('Please wait before submitting again.');
-        return;
-    }
+grecaptcha.ready(function() {
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Check if the user submitted recently
+        const now = Date.now();
+        if (now - lastSubmitTime < 3000) {
+            alert('Please wait before submitting again.');
+            return;
+        }
 
-    lastSubmitTime = now;
+        lastSubmitTime = now;
 
-    // Get the form data
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData);
+        // Get the form data
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
 
-    // Ensure reCAPTCHA is ready and token is included
-    grecaptcha.ready(function () {
+        // Use reCAPTCHA to get the response token
         grecaptcha.execute('6Le4izIrAAAAAOKdfch5ZAzkQS3nZC0kqiA86Onh', { action: 'submit' }).then(async function (token) {
             // Add the CAPTCHA response token to the form data
             data.captchaResponse = token;
