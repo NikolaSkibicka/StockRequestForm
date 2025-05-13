@@ -91,20 +91,46 @@ module.exports = async (req, res) => {
     const captchaSecret = process.env.RECAPTCHA_SECRET_KEY;
     const captchaVerificationUrl = `https://www.google.com/recaptcha/api/siteverify`;
 
-    const captchaRes = await axios.post(
-      captchaVerificationUrl,
-      new URLSearchParams({
-        secret: captchaSecret,
-        response: captchaResponse,
-        remoteip: ip,
-      }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
+   const https = require('https');
+const querystring = require('querystring');
 
-    if (!captchaRes.data.success) {
-      console.warn(`CAPTCHA failed for IP: ${ip}`);
-      return res.status(400).json({ success: false, message: 'reCAPTCHA verification failed' });
-    }
+function verifyCaptcha(secret, response, remoteip) {
+    const postData = querystring.stringify({
+        secret,
+        response,
+        remoteip
+    });
+
+    const options = {
+        hostname: 'www.google.com',
+        path: '/recaptcha/api/siteverify',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': Buffer.byteLength(postData)
+        }
+    };
+
+    return new Promise((resolve, reject) => {
+        const req = https.request(options, res => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const json = JSON.parse(data);
+                    resolve(json);
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        });
+
+        req.on('error', reject);
+        req.write(postData);
+        req.end();
+    });
+}
+
 
     // Send confirmation email to the user
     await transporter.sendMail({
