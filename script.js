@@ -24,15 +24,6 @@ const stockOptions = {
     colognes: ["Paco Rabanne 1 Million Eau de Toilette 100ml", "Other"],
     electronics: ["AirPods Pro", "Beats by Dre", "Other"]
 };
-function hashString(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const chr = str.charCodeAt(i);
-        hash = (hash << 5) - hash + chr;
-        hash |= 0;
-    }
-    return hash;
-}
 
 let lastSubmitTime = 0;
 
@@ -65,61 +56,65 @@ function updateSubcategory() {
 categorySelect.addEventListener('change', updateSubcategory);
 window.addEventListener('load', updateSubcategory);
 
-// Mark the submit handler as async
 form.addEventListener('submit', async function(e) {
     e.preventDefault();
+    
+    // Check if the user submitted recently
     const now = Date.now();
     if (now - lastSubmitTime < 3000) {
         alert('Please wait before submitting again.');
         return;
     }
 
+    lastSubmitTime = now;
+
+    // Get the form data
     const formData = new FormData(form);
     const data = Object.fromEntries(formData);
 
-    // Assuming you have a captcha validation here
-    if (hashString(data.captchaAnswer.trim()) !== correctCaptchaHash) {
-        alert('CAPTCHA answer is incorrect. Please try again.');
-        correctCaptchaHash = generateCaptcha();
-        return;
-    }
+    // Ensure reCAPTCHA is ready and token is included
+    grecaptcha.ready(function () {
+        grecaptcha.execute('YOUR_SITE_KEY', { action: 'submit' }).then(async function (token) {
+            // Add the CAPTCHA response token to the form data
+            data.captchaResponse = token;
 
-    lastSubmitTime = now;
-    console.log('Stock request submitted:', data);
+            // Proceed with the form submission
+            console.log('Stock request submitted:', data);
 
-    try {
-        const response = await fetch('https://stock-request-form.vercel.app/api/submit', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),  // Make sure you're passing the correct data object
+            try {
+                const response = await fetch('https://stock-request-form.vercel.app/api/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data), // Send the data to the server
+                });
+
+                let responseData;
+                const contentType = response.headers.get('content-type');
+
+                if (contentType && contentType.includes('application/json')) {
+                    responseData = await response.json();
+                } else {
+                    const text = await response.text();  // fallback for non-JSON error responses
+                    console.error('Non-JSON response:', text);
+                    alert('An error occurred. Please try again later.');
+                    return;
+                }
+
+                if (responseData.success) {
+                    console.log('Submission successful:', responseData.message);
+                } else {
+                    console.error('Error from server:', responseData.message);
+                }
+            } catch (error) {
+                console.error('Failed to submit form:', error);
+            }
+
+            // Reset form and captcha after submission
+            form.reset();
+            correctCaptchaHash = generateCaptcha();
+            updateSubcategory();
         });
-
-        let responseData;
-const contentType = response.headers.get('content-type');
-
-if (contentType && contentType.includes('application/json')) {
-    responseData = await response.json();
-} else {
-    const text = await response.text();  // fallback for text/html error pages
-    console.error('Non-JSON response:', text);
-    alert('An error occurred. Please try again later.');
-    return;
-}
-
-
-        if (responseData.success) {
-            // Handle success
-            console.log('Submission successful:', responseData.message);
-        } else {
-            console.error('Error from server:', responseData.message);
-        }
-    } catch (error) {
-        console.error('Failed to submit form:', error);
-    }
-
-    form.reset();
-    correctCaptchaHash = generateCaptcha();
-    updateSubcategory();
+    });
 });
