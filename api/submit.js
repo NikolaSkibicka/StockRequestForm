@@ -1,165 +1,92 @@
-export const config = {
-  api: {
-    bodyParser: true,
-  },
-};
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection:', reason);
-});
-
 const nodemailer = require('nodemailer');
 require('dotenv').config();
+const cors = require('cors');
 
-// In-memory rate limiter and IP banlist
-const rateLimitMap = new Map(); // {ip: [timestamps]}
-const banlist = new Set(); // Set of banned IPs
-
-// Check environment variables
-if (!process.env.ADMIN_EMAIL || !process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-  throw new Error('Missing required environment variables');
-}
-
-// Email transporter setup
+// Create a transporter to send emails
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT),
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
 });
 
-// Utility: Check if IP is rate-limited
-function isRateLimited(ip) {
-  const now = Date.now();
-  const windowMs = 60 * 1000; // 1 minute
-  const maxRequests = 5;
+// In-memory store to track user submissions (should be replaced with a persistent store in production)
+const requestLog = {};
 
-  if (!rateLimitMap.has(ip)) {
-    rateLimitMap.set(ip, []);
-  }
+const MAX_REQUESTS = 5;  // Max number of requests per user
+const TIME_WINDOW = 10 * 60 * 1000;  // 10 minutes in milliseconds
 
-  const timestamps = rateLimitMap.get(ip).filter(ts => now - ts < windowMs);
-  timestamps.push(now);
-  rateLimitMap.set(ip, timestamps);
-
-  return timestamps.length > maxRequests;
-}
-
-// Utility: Check if IP is banned
-function isBanned(ip) {
-  return banlist.has(ip);
-}
-
+// This function is used to handle the request and response
 module.exports = async (req, res) => {
-  // Handle CORS
-  res.setHeader('Access-Control-Allow-Origin', 'https://stock-request-form.vercel.app');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    // Handle CORS for your frontend domain
+    cors({
+        origin: 'https://stock-request-form.vercel.app/', // Your frontend domain
+        methods: ['POST'],
+        allowedHeaders: ['Content-Type'],
+    })(req, res, () => {});
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+    if (req.method === 'POST') {
+        const { name, email, category, stockItem, description } = req.body;
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, message: 'Method Not Allowed' });
-  }
+        // Get the current time
+        const currentTime = Date.now();
 
-  const { name, email, category, stockItem, description, captchaResponse } = req.body;
-
-  if (!name || !email || !category || !stockItem || !captchaResponse) {
-    return res.status(400).json({ success: false, message: 'Missing required fields' });
-  }
-
-  const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
-
-  // Ban and rate limit checks
-  if (isBanned(ip)) {
-    console.warn(`Blocked IP (banned): ${ip}`);
-    return res.status(403).json({ success: false, message: 'Your IP is banned.' });
-  }
-
-  if (isRateLimited(ip)) {
-    console.warn(`Rate limit exceeded for IP: ${ip}`);
-    return res.status(429).json({ success: false, message: 'Too many requests, please slow down.' });
-  }
-
-  try {
-    // Verify CAPTCHA with Google
-    const captchaSecret = process.env.RECAPTCHA_SECRET_KEY;
-    const captchaVerificationUrl = `https://www.google.com/recaptcha/api/siteverify`;
-
-   const https = require('https');
-const querystring = require('querystring');
-
-function verifyCaptcha(secret, response, remoteip) {
-    const postData = querystring.stringify({
-        secret,
-        response,
-        remoteip
-    });
-
-    const options = {
-        hostname: 'www.google.com',
-        path: '/recaptcha/api/siteverify',
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Content-Length': Buffer.byteLength(postData)
+        // Initialize request log for the user if it doesn't exist
+        if (!requestLog[email]) {
+            requestLog[email] = [];
         }
-    };
 
-    return new Promise((resolve, reject) => {
-        const req = https.request(options, res => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                try {
-                    const json = JSON.parse(data);
-                    resolve(json);
-                } catch (err) {
-                    reject(err);
-                }
+        // Filter out requests older than the time window
+        requestLog[email] = requestLog[email].filter(timestamp => currentTime - timestamp < TIME_WINDOW);
+
+        // Check if the user has reached the maximum request limit
+        if (requestLog[email].length >= MAX_REQUESTS) {
+            return res.status(429).json({
+                success: false,
+                message: 'You have reached the maximum number of requests. Please try again later.',
             });
-        });
+        }
 
-        req.on('error', reject);
-        req.write(postData);
-        req.end();
-    });
-}
+        // Log the current request time
+        requestLog[email].push(currentTime);
 
-const captchaResult = await verifyCaptcha(captchaSecret, captchaResponse, ip);
+        try {
+            // Send confirmation email to the user
+            await transporter.sendMail({
+                from: process.env.ADMIN_EMAIL,  // Verified sender email
+                to: email,
+                subject: 'Thank you for your enquiry!',
+                text: `Hi ${name},\n\nThank you for your enquiry about ${stockItem} (${category}). We’ve received your request and will get back to you shortly.\n\nBest,\nYour Team`,
+            });
 
-if (!captchaResult.success) {
-  console.warn(`CAPTCHA failed for IP: ${ip}`);
-  return res.status(400).json({ success: false, message: 'reCAPTCHA verification failed' });
-}
+            console.log(`Confirmation email sent to ${email}`);
 
-    // Send confirmation email to the user
-    await transporter.sendMail({
-      from: process.env.ADMIN_EMAIL,
-      to: email,
-      subject: 'Thank you for your enquiry!',
-      text: `Hi ${name},\n\nThank you for your enquiry about ${stockItem} (${category}).\n\nBest,\nDrew`,
-    });
+            // Send full form details to the admin
+            await transporter.sendMail({
+                from: process.env.ADMIN_EMAIL,
+                to: process.env.ADMIN_EMAIL,
+                subject: `New Stock Request from ${name}`,
+                text: `
+You received a new stock request:
 
-    // Send admin notification
-    await transporter.sendMail({
-      from: process.env.ADMIN_EMAIL,
-      to: process.env.ADMIN_EMAIL,
-      subject: `New Stock Request from ${name}`,
-      text: `New stock request:\nName: ${name}\nEmail: ${email}\nCategory: ${category}\nItem: ${stockItem}\nDescription: ${description}`,
-    });
+Name: ${name}
+Email: ${email}
+Category: ${category}
+Item: ${stockItem}
+Description: ${description}
+                `,
+            });
 
-    return res.status(200).json({ success: true, message: 'Request submitted successfully' });
-  } catch (error) {
-    console.error('Server error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal Server Error',
-      error: error.message,
-    });
-  }
+            console.log(`Form details sent to admin: ${process.env.ADMIN_EMAIL}`);
+
+            return res.status(200).json({ success: true, message: 'Request submitted successfully' });
+        } catch (error) {
+            console.error('Error sending email:', error);
+            return res.status(500).json({ success: false, message: 'Error sending email' });
+        }
+    } else {
+        return res.status(405).json({ success: false, message: 'Method Not Allowed' });
+    }
 };
