@@ -1,15 +1,12 @@
-export const config = {
-  api: {
-    bodyParser: true,
-  },
-};
+
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection:', reason);
 });
+
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 require('dotenv').config();
-
+const cors = require('cors');
 // In-memory rate limiter and IP banlist (for simplicity, you can use a database for persistence)
 const rateLimitMap = new Map();  // {ip: [timestamps]}
 const banlist = new Set();  // Set of banned IPs
@@ -50,24 +47,24 @@ function isBanned(ip) {
 }
 
 module.exports = async (req, res) => {
-    try {
         // Handle CORS
-        res.setHeader('Access-Control-Allow-Origin', 'https://stock-request-form.vercel.app');
-        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+      cors({
+        origin: 'https://stock-request-form.vercel.app/', // Your frontend domain
+        methods: ['POST'],
+        allowedHeaders: ['Content-Type'],
+    })(req, res, () => {});
+}
+      if (req.method === 'POST') {
+        const { name, email, category, stockItem, description } = req.body;
+      }
+      if (req.method !== 'POST') {
+            return res.status(405).json({ success: false, message: 'Method Not Allowed' });
+        }
+  
         if (req.method === 'OPTIONS') {
             res.status(200).end();
            return;
         }
-
-        if (req.method !== 'POST') {
-            return res.status(405).json({ success: false, message: 'Method Not Allowed' });
-        }
-
-        // ✅ Parse body
-        const { name, email, category, stockItem, description, captchaResponse } = req.body;
-
 
         const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
 
@@ -107,12 +104,13 @@ module.exports = async (req, res) => {
             return res.status(400).json({ success: false, message: 'reCAPTCHA verification failed' });
         }
 
+        try {
         // Send confirmation email to the user
         await transporter.sendMail({
             from: process.env.ADMIN_EMAIL,
             to: email,
             subject: 'Thank you for your enquiry!',
-            text: `Hi ${name},\n\nThank you for your enquiry about ${stockItem} (${category}). We’ve received your request and will get back to you shortly.\n\nBest,\nYour Team`,
+            text: `Hi ${name},\n\nThank you for your enquiry about ${stockItem} (${category}). We’ve received your request and will get back to you shortly.\n\nBest,\nDrew`,
         });
 
         // Send admin notification
@@ -122,8 +120,6 @@ module.exports = async (req, res) => {
             subject: `New Stock Request from ${name}`,
             text: `You received a new stock request:\n\nName: ${name}\nEmail: ${email}\nCategory: ${category}\nItem: ${stockItem}\nDescription: ${description}`,
         });
-
-        console.log(`Request processed successfully for IP: ${ip}`);
 
         return res.status(200).json({ success: true, message: 'Request submitted successfully' });
 
