@@ -74,7 +74,7 @@ form.addEventListener('submit', async function(e) {
 
     // Ensure reCAPTCHA is ready and token is included
     grecaptcha.ready(function () {
-        grecaptcha.execute('YOUR_SITE_KEY', { action: 'submit' }).then(async function (token) {
+        grecaptcha.execute('6Le4izIrAAAAAOKdfch5ZAzkQS3nZC0kqiA86Onh', { action: 'submit' }).then(async function (token) {
             // Add the CAPTCHA response token to the form data
             data.captchaResponse = token;
 
