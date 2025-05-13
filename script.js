@@ -113,8 +113,8 @@ form.addEventListener('submit', async function(e) {
 
             // Reset form and captcha after submission
             form.reset();
-            correctCaptchaHash = generateCaptcha();
-            updateSubcategory();
+            updateSubcategory();  // Reset subcategory selection
+            descriptionBox.style.display = 'none';  // Hide the description box if not needed
         });
     });
 });
