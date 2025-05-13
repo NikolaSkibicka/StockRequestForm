@@ -75,6 +75,15 @@ form.addEventListener('submit', function(e) {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData);
 
+    // Get the reCAPTCHA response
+    const recaptchaResponse = grecaptcha.getResponse();
+    if (!recaptchaResponse) {
+        alert('Please complete the reCAPTCHA');
+        return;
+    }
+    data.recaptchaResponse = recaptchaResponse;
+
+     // Your existing CAPTCHA logic
     if (hashString(data.captchaAnswer.trim()) !== correctCaptchaHash) {
         alert('CAPTCHA answer is incorrect. Please try again.');
         correctCaptchaHash = generateCaptcha();
