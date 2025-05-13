@@ -24,7 +24,35 @@ const stockOptions = {
     colognes: ["Paco Rabanne 1 Million Eau de Toilette 100ml", "Other"],
     electronics: ["AirPods Pro", "Beats by Dre", "Other"]
 };
+function hashString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const chr = str.charCodeAt(i);
+        hash = (hash << 5) - hash + chr;
+        hash |= 0;
+    }
+    return hash;
+}
 
+
+function generateCaptcha() {
+    const num1 = Math.floor(Math.random() * 10) + 1;
+    const num2 = Math.floor(Math.random() * 10) + 1;
+    const operations = ['+', '-', '*'];
+    const op = operations[Math.floor(Math.random() * operations.length)];
+    let answer;
+    let question;
+
+    switch(op) {
+        case '+': answer = num1 + num2; question = `What is ${num1} + ${num2}?`; break;
+        case '-': answer = num1 - num2; question = `What is ${num1} - ${num2}?`; break;
+        case '*': answer = num1 * num2; question = `What is ${num1} × ${num2}?`; break;
+    }
+    document.getElementById('captchaQuestion').textContent = question;
+    return hashString(answer.toString());
+}
+
+let correctCaptchaHash = generateCaptcha();
 let lastSubmitTime = 0;
 
 const form = document.getElementById('stockRequestForm');
@@ -56,65 +84,48 @@ function updateSubcategory() {
 categorySelect.addEventListener('change', updateSubcategory);
 window.addEventListener('load', updateSubcategory);
 
-grecaptcha.ready(function() {
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        // Check if the user submitted recently
-        const now = Date.now();
-        if (now - lastSubmitTime < 3000) {
-            alert('Please wait before submitting again.');
-            return;
+form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastSubmitTime < 3000) {
+        alert('Please wait before submitting again.');
+        return;
+    }
+
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+
+    if (hashString(data.captchaAnswer.trim()) !== correctCaptchaHash) {
+        alert('CAPTCHA answer is incorrect. Please try again.');
+        correctCaptchaHash = generateCaptcha();
+        return;
+    }
+
+    lastSubmitTime = now;
+    console.log('Stock request submitted:', data);
+
+    // Send form data to backend API
+    fetch('https://stock-request-form.vercel.app/api/submit', { // Replace with your backend URL
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('Thank you for your request!');
+        } else {
+            alert('Error sending request. Please try again.');
         }
-
-        lastSubmitTime = now;
-
-        // Get the form data
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData);
-
-        // Use reCAPTCHA to get the response token
-        grecaptcha.execute('6Le4izIrAAAAAOKdfch5ZAzkQS3nZC0kqiA86Onh', { action: 'submit' }).then(async function (token) {
-            // Add the CAPTCHA response token to the form data
-            data.captchaResponse = token;
-
-            // Proceed with the form submission
-            console.log('Stock request submitted:', data);
-
-            try {
-                const response = await fetch('https://stock-request-form.vercel.app/api/submit', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data), // Send the data to the server
-                });
-
-                let responseData;
-                const contentType = response.headers.get('content-type');
-
-                if (contentType && contentType.includes('application/json')) {
-                    responseData = await response.json();
-                } else {
-                    const text = await response.text();  // fallback for non-JSON error responses
-                    console.error('Non-JSON response:', text);
-                    alert('An error occurred. Please try again later.');
-                    return;
-                }
-
-                if (responseData.success) {
-                    console.log('Submission successful:', responseData.message);
-                } else {
-                    console.error('Error from server:', responseData.message);
-                }
-            } catch (error) {
-                console.error('Failed to submit form:', error);
-            }
-
-            // Reset form and captcha after submission
-            form.reset();
-            updateSubcategory();  // Reset subcategory selection
-            descriptionBox.style.display = 'none';  // Hide the description box if not needed
-        });
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an issue submitting the form. Please try again later.');
     });
+
+    form.reset();
+    correctCaptchaHash = generateCaptcha();
+    updateSubcategory();
 });
