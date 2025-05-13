@@ -9,7 +9,6 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 const nodemailer = require('nodemailer');
-const axios = require('axios');
 require('dotenv').config();
 
 // In-memory rate limiter and IP banlist
@@ -131,6 +130,12 @@ function verifyCaptcha(secret, response, remoteip) {
     });
 }
 
+const captchaResult = await verifyCaptcha(captchaSecret, captchaResponse, ip);
+
+if (!captchaResult.success) {
+  console.warn(`CAPTCHA failed for IP: ${ip}`);
+  return res.status(400).json({ success: false, message: 'reCAPTCHA verification failed' });
+}
 
     // Send confirmation email to the user
     await transporter.sendMail({
