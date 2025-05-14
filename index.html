@@ -45,7 +45,7 @@
         event.preventDefault();
 // Get the reCAPTCHA response
         const captchaResponse = grecaptcha.getResponse();
- if (!captchaResponse) {
+         if (!captchaResponse) {
             alert('Please verify that you are not a robot.');
             return;
         }
@@ -58,7 +58,23 @@
             description: document.getElementById('description').value,
             captchaResponse: captchaResponse,
         };
+ // Send the form data to the backend
+        const response = await fetch('/api/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData),
+        });
 
+        const data = await response.json();
+
+        if (data.success) {
+            alert('Your request was submitted successfully!');
+        } else {
+            alert('Error: ' + data.message);
+        }
+    });
     <script src="script.js"></script>
 </body>
 </html>
