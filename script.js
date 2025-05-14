@@ -81,7 +81,7 @@ const formData = {
             description: document.getElementById('description').value,
             captchaResponse: captchaResponse,
         };
-    const formData = new FormData(form);
+    formData = new FormData(form);
     const data = Object.fromEntries(formData);
 
     // Always regenerate and verify CAPTCHA
