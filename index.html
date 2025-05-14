@@ -58,23 +58,7 @@
             description: document.getElementById('description').value,
             captchaResponse: captchaResponse,
         };
- // Send the form data to the backend
-        const response = await fetch('/api/submit', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData),
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            alert('Your request was submitted successfully!');
-        } else {
-            alert('Error: ' + data.message);
-        }
-    });
+ 
 </script>
     <script src="script.js"></script>
 </body>
