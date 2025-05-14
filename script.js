@@ -100,15 +100,19 @@ form.addEventListener('submit', function (e) {
     })
         .then(response => response.json())
         .then(result => {
+            grecaptcha.reset();
+            
             if (result.success) {
                 alert('Thank you for your request!');
             } else {
                 alert(result.message || 'Error sending request. Please try again.');
+                grecaptcha.reset();
             }
         })
         .catch(error => {
             console.error('Error:', error);
             alert('There was an issue submitting the form. Please try again later.');
+            grecaptcha.reset();
         })
         .finally(() => {
             form.reset();
