@@ -37,7 +37,7 @@
              data-sitekey="6Le4izIrAAAAAOKdfch5ZAzkQS3nZC0kqiA86Onh"
              data-callback="onCaptchaSuccess"
              data-expired-callback="onCaptchaExpired"></div>
-            <button type="submit" id="submit-btn" disabled>Submit</button>
+            <button type="submit"  class = "submit-btn" id="submit-btn" disabled>Submit</button>
         </form>
     </div>
 
@@ -53,11 +53,11 @@
             return;
         }
         function onCaptchaSuccess() {
-            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submit-btn').disabled = false;
         }
 
         function onCaptchaExpired() {
-            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submit-btn').disabled = true;
         }
 
 
