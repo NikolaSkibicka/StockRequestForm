@@ -63,9 +63,11 @@ function updateSubcategory() {
 
 categorySelect.addEventListener('change', updateSubcategory);
 window.addEventListener('load', updateSubcategory);
+let lastSubmitTime = 0;
 
-form.addEventListener('submit', function(e) {
+form.addEventListener('submit', function (e) {
     e.preventDefault();
+
     const now = Date.now();
     if (now - lastSubmitTime < 3000) {
         alert('Please wait before submitting again.');
@@ -75,46 +77,43 @@ form.addEventListener('submit', function(e) {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData);
 
-    // Get the reCAPTCHA response
+    // Always regenerate and verify CAPTCHA
     const recaptchaResponse = grecaptcha.getResponse();
     if (!recaptchaResponse) {
         alert('Please complete the reCAPTCHA');
         return;
     }
-    data.recaptchaResponse = recaptchaResponse;
 
-     // Your existing CAPTCHA logic
     if (hashString(data.captchaAnswer.trim()) !== correctCaptchaHash) {
         alert('CAPTCHA answer is incorrect. Please try again.');
-        correctCaptchaHash = generateCaptcha();
+        correctCaptchaHash = generateCaptcha(); // 🔁 regenerate
         return;
     }
 
     lastSubmitTime = now;
-    console.log('Stock request submitted:', data);
+    data.recaptchaResponse = recaptchaResponse;
 
-    // Send form data to backend API
-    fetch('https://stock-request-form.vercel.app/api/submit', { // Replace with your backend URL
+    fetch('https://stock-request-form.vercel.app/api/submit', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
     })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            alert('Thank you for your request!');
-        } else {
-            alert('Error sending request. Please try again.');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('There was an issue submitting the form. Please try again later.');
-    });
-
-    form.reset();
-    correctCaptchaHash = generateCaptcha();
-    updateSubcategory();
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert('Thank you for your request!');
+            } else {
+                alert(result.message || 'Error sending request. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('There was an issue submitting the form. Please try again later.');
+        })
+        .finally(() => {
+            form.reset();
+            correctCaptchaHash = generateCaptcha(); // 🔁 force regeneration
+            updateSubcategory();
+            grecaptcha.reset(); // 🔁 reset reCAPTCHA
+        });
 });
