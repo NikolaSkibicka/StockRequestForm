@@ -73,7 +73,14 @@ form.addEventListener('submit', function (e) {
         alert('Please wait before submitting again.');
         return;
     }
-
+const formData = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            category: document.getElementById('category').value,
+            stockItem: document.getElementById('stockItem').value,
+            description: document.getElementById('description').value,
+            captchaResponse: captchaResponse,
+        };
     const formData = new FormData(form);
     const data = Object.fromEntries(formData);
 
