@@ -40,6 +40,24 @@
             <button type="submit"  class = "submit-btn" id="submit-btn">Submit</button>
         </form>
     </div>
+<script>
+    document.getElementById('stockRequestForm').addEventListener('submit', async function (event) {
+        event.preventDefault();
+// Get the reCAPTCHA response
+        const captchaResponse = grecaptcha.getResponse();
+ if (!captchaResponse) {
+            alert('Please verify that you are not a robot.');
+            return;
+        }
+ // Collect form data
+        const formData = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            category: document.getElementById('category').value,
+            stockItem: document.getElementById('stockItem').value,
+            description: document.getElementById('description').value,
+            captchaResponse: captchaResponse,
+        };
 
     <script src="script.js"></script>
 </body>
