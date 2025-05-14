@@ -33,10 +33,11 @@
                 <label for="description">Describe your request:</label>
                 <textarea id="description" name="description"></textarea>
             </div>
-            <div class="form-group captcha">
-               <div class="g-recaptcha" data-sitekey="6Le4izIrAAAAAOKdfch5ZAzkQS3nZC0kqiA86Onh"></div>
-            </div>
-            <button type="submit" class="submit-btn">Submit Request</button>
+            <div class="g-recaptcha"
+             data-sitekey="6Le4izIrAAAAAOKdfch5ZAzkQS3nZC0kqiA86Onh"
+             data-callback="onCaptchaSuccess"
+             data-expired-callback="onCaptchaExpired"></div>
+            <button type="submit" id="submit-btn" disabled>Submit</button>
         </form>
     </div>
 
@@ -51,6 +52,14 @@
             alert('Please verify that you are not a robot.');
             return;
         }
+        function onCaptchaSuccess() {
+            document.getElementById('submitBtn').disabled = false;
+        }
+
+        function onCaptchaExpired() {
+            document.getElementById('submitBtn').disabled = true;
+        }
+
 
         // Collect form data
         const formData = {
